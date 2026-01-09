@@ -4,6 +4,9 @@ import { supabase } from "../supabaseClient";
 
 interface AuthContextType {
     session: any; 
+    signUpNewUser: (email: string, password: string) => Promise<any>;
+    signInUser: (email: string, password: string) => Promise<any>;
+    signOut: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -17,7 +20,7 @@ export const AuthContextProvider = ({ children }: AuthContextProviderProps) => {
     const [session, setSession] = useState<any>(undefined); 
 
     //Sign up
-    const signUpNewUser = async () => {
+    const signUpNewUser = async (email: string, password: string) => {
         const {data, error} = await supabase.auth.signUp({
             email: email,
             password: password,
@@ -29,6 +32,26 @@ export const AuthContextProvider = ({ children }: AuthContextProviderProps) => {
         }
         return { success: true, data};
     }
+
+    //Sign in
+    const signInUser = async (email: string, password: string) => {
+        try {
+            const {data, error} = await supabase.auth.signInWithPassword({
+                email: email,
+                password: password,
+            });
+
+            if (error) {
+                console.error('sign in error occurred:', error);
+                return {success: false, error: error.message};
+            }
+            console.log("sign-in success: ", data);
+            return {success: true, data: data};
+        } catch(error) {
+            console.error("an error occurred: ", error);
+        }
+    };
+
 
     useEffect(() => {
         supabase.auth.getSession().then(({data: {session}}) => {
@@ -42,8 +65,8 @@ export const AuthContextProvider = ({ children }: AuthContextProviderProps) => {
     }, [])
 
     //Sign out
-    const signOut = () => {
-        const {error} = supabase.auth.signOut();
+    const signOut = async () => {
+        const {error} = await supabase.auth.signOut();
         if(error) {
             console.error("there was an error singing out: ", error);
         }
@@ -51,7 +74,8 @@ export const AuthContextProvider = ({ children }: AuthContextProviderProps) => {
     };
 
     return (
-        <AuthContext.Provider value={{ session, signUpNewUser, signOut }}>
+        <AuthContext.Provider 
+            value={{ session, signUpNewUser, signInUser, signOut }}>
             {children}
         </AuthContext.Provider>
     );
